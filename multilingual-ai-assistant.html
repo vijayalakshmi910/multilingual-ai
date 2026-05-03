@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Agent for Regional Languages</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Telugu&family=Noto+Sans+Devanagari&family=Noto+Sans+Tamil&family=Noto+Sans+Kannada&family=Noto+Sans+Malayalam&family=Noto+Sans+Bengali&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --surface: #18181f;
+    --surface2: #21212c;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --accent: #7c6af7;
+    --accent2: #a594f9;
+    --accent-bg: rgba(124,106,247,0.12);
+    --text: #f0eeff;
+    --text2: #a09abe;
+    --text3: #6b6985;
+    --green: #34d399;
+    --green-bg: rgba(52,211,153,0.1);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,0.1);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 700px; height: 500px;
+    background: radial-gradient(ellipse, rgba(124,106,247,0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 1;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(15,15,20,0.8);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent-bg);
+    border: 1px solid rgba(124,106,247,0.3);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-size: 15px; font-weight: 600; color: var(--text); }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+  .badge {
+    font-size: 11px; padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(52,211,153,0.2);
+  }
+
+  main {
+    flex: 1;
+    position: relative; z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  /* Language selector */
+  .lang-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .lang-btn {
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text2);
+    font-size: 13px;
+    font-family: 'Noto Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lang-btn:hover { border-color: var(--accent); color: var(--text); }
+  .lang-btn.active {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent2);
+    font-weight: 500;
+  }
+
+  /* Domain selector */
+  .domain-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .domain-btn {
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .domain-btn:hover { border-color: var(--border2); color: var(--text); }
+  .domain-btn.active {
+    background: var(--accent-bg);
+    border-color: rgba(124,106,247,0.4);
+    color: var(--accent2);
+  }
+
+  /* Chat area */
+  .chat-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 380px;
+    max-height: 440px;
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+  .chat-area::-webkit-scrollbar { width: 4px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .msg { display: flex; gap: 10px; max-width: 85%; animation: fadeUp 0.2s ease; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg.bot { align-self: flex-start; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .av {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 2px;
+  }
+  .msg.user .av { background: var(--accent); color: #fff; }
+  .msg.bot .av { background: var(--surface2); border: 1px solid var(--border2); color: var(--accent2); font-size: 14px; }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .msg.user .bubble {
+    background: var(--accent);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot .bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .meta {
+    font-size: 11px; color: var(--text3);
+    margin-top: 3px; padding: 0 3px;
+  }
+
+  /* Typing indicator */
+  .typing-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .typing-dots span {
+    width: 6px; height: 6px;
+    background: var(--text3);
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+  /* Input row */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .input-section:focus-within { border-color: rgba(124,106,247,0.4); }
+
+  #userInput {
+    width: 100%;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Noto Sans', sans-serif;
+    resize: none;
+    min-height: 50px;
+    max-height: 120px;
+    outline: none;
+    line-height: 1.6;
+  }
+  #userInput::placeholder { color: var(--text3); }
+
+  .input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.15);
+  }
+  .input-hint { font-size: 11px; color: var(--text3); }
+
+  #sendBtn {
+    padding: 8px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  #sendBtn:hover { background: #6a58e8; }
+  #sendBtn:disabled { opacity: 0.4; cursor: default; }
+
+  /* Examples */
+  .examples-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .example-chip {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .example-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent2);
+    background: var(--accent-bg);
+  }
+
+  /* Error */
+  .error-bar {
+    background: var(--red-bg);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--red);
+    display: none;
+  }
+
+  /* Footer */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 1rem;
+    font-size: 11px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+  }
+
+  /* API Key section */
+  .apikey-section {
+    background: var(--surface);
+    border: 1px solid rgba(124,106,247,0.2);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+  }
+  .apikey-section p { font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+  .apikey-section a { color: var(--accent2); }
+  .apikey-row { display: flex; gap: 8px; }
+  #apiKeyInput {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    font-family: monospace;
+    outline: none;
+  }
+  #apiKeyInput:focus { border-color: var(--accent); }
+  #saveKeyBtn {
+    padding: 8px 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .key-status { font-size: 12px; margin-top: 6px; }
+  .key-status.ok { color: var(--green); }
+  .key-status.no { color: var(--text3); }
+
+  @media (max-width: 600px) {
+    main { padding: 1rem; }
+    header { padding: 1rem; }
+    .msg { max-width: 92%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌐</div>
+    <div>
+      <div class="logo-text">AI Agent for Regional Languages</div>
+      <div class="logo-sub">Multilingual Assistant · 8 Indian Languages</div>
+    </div>
+  </div>
+  <div class="badge">● Live</div>
+</header>
+
+<main>
+
+  <!-- API Key Section -->
+  <div class="apikey-section">
+    <p>🔑 Enter your Anthropic API Key to power the AI. Get one free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    <div class="apikey-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+      <button id="saveKeyBtn">Save Key</button>
+    </div>
+    <div class="key-status no" id="keyStatus">No API key saved yet</div>
+  </div>
+
+  <!-- Language -->
+  <div>
+    <div class="section-label">Select Language</div>
+    <div class="lang-grid">
+      <button class="lang-btn active" data-l="Telugu">తెలుగు</button>
+      <button class="lang-btn" data-l="Hindi">हिंदी</button>
+      <button class="lang-btn" data-l="Tamil">தமிழ்</button>
+      <button class="lang-btn" data-l="Kannada">ಕನ್ನಡ</button>
+      <button class="lang-btn" data-l="Malayalam">മലയാളം</button>
+      <button class="lang-btn" data-l="Marathi">मराठी</button>
+      <button class="lang-btn" data-l="Bengali">বাংলা</button>
+      <button class="lang-btn" data-l="English">English</button>
+    </div>
+  </div>
+
+  <!-- Domain -->
+  <div>
+    <div class="section-label">Topic / Domain</div>
+    <div class="domain-grid">
+      <button class="domain-btn active" data-d="General">💬 General</button>
+      <button class="domain-btn" data-d="Healthcare">🏥 Healthcare</button>
+      <button class="domain-btn" data-d="Education">📚 Education</button>
+      <button class="domain-btn" data-d="Banking">🏦 Banking</button>
+      <button class="domain-btn" data-d="Government Services">🏛️ Govt Services</button>
+      <button class="domain-btn" data-d="Agriculture">🌾 Agriculture</button>
+      <button class="domain-btn" data-d="Legal Rights">⚖️ Legal Rights</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area" id="chatArea"></div>
+
+  <!-- Error -->
+  <div class="error-bar" id="errorBar"></div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <textarea id="userInput" placeholder="Type your question in any Indian language or English..." rows="2"></textarea>
+    <div class="input-footer">
+      <span class="input-hint">Press Enter to send · Shift+Enter for new line</span>
+      <button id="sendBtn">
+        <span>Send</span>
+        <span>↗</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Examples -->
+  <div>
+    <div class="section-label">Quick Examples</div>
+    <div class="examples-grid">
+      <span class="example-chip" data-l="Telugu" data-d="Healthcare">నాకు జ్వరంగా ఉంది, ఏమి చేయాలి?</span>
+      <span class="example-chip" data-l="Hindi" data-d="Banking">मुझे बैंक अकाउंट खोलना है</span>
+      <span class="example-chip" data-l="Tamil" data-d="Education">என் குழந்தைக்கு நல்ல பள்ளி எது?</span>
+      <span class="example-chip" data-l="Telugu" data-d="Government Services">రేషన్ కార్డు ఎలా తీసుకోవాలి?</span>
+      <span class="example-chip" data-l="Kannada" data-d="Agriculture">ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಹೇಗೆ ಸುಧಾರಿಸಬಹುದು?</span>
+      <span class="example-chip" data-l="Malayalam" data-d="Legal Rights">എന്റെ വോട്ടർ അവകാശങ്ങൾ എന്തൊക്കെ?</span>
+      <span class="example-chip" data-l="English" data-d="Healthcare">What are symptoms of diabetes?</span>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  AI Agent for Regional Languages · Built with Anthropic Claude API · Supports 8 Indian Languages
+</footer>
+
+<script>
+  let lang = 'Telugu';
+  let domain = 'General';
+  let apiKey = localStorage.getItem('rla_api_key') || '';
+
+  const chatArea = document.getElementById('chatArea');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const errorBar = document.getElementById('errorBar');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const keyStatus = document.getElementById('keyStatus');
+
+  function updateKeyStatus() {
+    if (apiKey) {
+      keyStatus.textContent = '✓ API key saved — ready to chat!';
+      keyStatus.className = 'key-status ok';
+      apiKeyInput.value = apiKey;
+    } else {
+      keyStatus.textContent = 'No API key saved yet';
+      keyStatus.className = 'key-status no';
+    }
+  }
+  updateKeyStatus();
+
+  document.getElementById('saveKeyBtn').addEventListener('click', () => {
+    const val = apiKeyInput.value.trim();
+    if (val.startsWith('sk-ant-') || val.startsWith('sk-')) {
+      apiKey = val;
+      localStorage.setItem('rla_api_key', val);
+      updateKeyStatus();
+    } else {
+      keyStatus.textContent = '✗ Invalid key format. Must start with sk-ant-';
+      keyStatus.className = 'key-status';
+      keyStatus.style.color = '#f87171';
+    }
+  });
+
+  // Welcome message
+  addBotMsg('నమస్కారం! 🙏 నేను మీ AI సహాయకుడిని.\n\nమీరు ఏ భాషలో అడిగినా — Telugu, Hindi, Tamil, Kannada, Malayalam, Marathi, Bengali — నేను అదే భాషలో సమాధానం ఇస్తాను.\n\nపై భాష మరియు డొమైన్ ఎంచుకుని మీ ప్రశ్న అడగండి!', 'Telugu');
+
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.lang-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      lang = b.dataset.l;
+    });
+  });
+
+  document.querySelectorAll('.domain-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.domain-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      domain = b.dataset.d;
+    });
+  });
+
+  document.querySelectorAll('.example-chip').forEach(c => {
+    c.addEventListener('click', () => {
+      userInput.value = c.textContent;
+      const cl = c.dataset.l, cd = c.dataset.d;
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.l === cl));
+      document.querySelectorAll('.domain-btn').forEach(b => b.classList.toggle('active', b.dataset.d === cd));
+      lang = cl; domain = cd;
+      userInput.focus();
+    });
+  });
+
+  userInput.addEventListener('input', () => {
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  });
+
+  userInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  function esc(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  function addUserMsg(text) {
+    const d = document.createElement('div');
+    d.className = 'msg user';
+    d.innerHTML = `<div class="av">You</div><div><div class="bubble">${esc(text)}</div><div class="meta">${lang} · ${domain}</div></div>`;
+    chatArea.appendChild(d);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function addBotMsg(text, lbl) {
+    const d = document.createElement('div');
+    d.className = 'msg bot';
+    d.innerHTML = `<div class="av">🌐</div><div><div class="bubble">${esc(text)}</div><div class="meta">${lbl || lang} · AI Response</div></div>`;
+    chatArea.appendChild(d);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function addTyping() {
+    const d = document.createElement('div');
+    d.className = 'msg bot'; d.id = 'typing';
+    d.innerHTML = `<div class="av">🌐</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+    chatArea.appendChild(d);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function rmTyping() {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+  }
+
+  function showError(msg) {
+    errorBar.textContent = msg;
+    errorBar.style.display = 'block';
+    setTimeout(() => errorBar.style.display = 'none', 7000);
+  }
+
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    if (!apiKey) {
+      showError('Please enter your Anthropic API key above first!');
+      return;
+    }
+
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    errorBar.style.display = 'none';
+
+    addUserMsg(text);
+    addTyping();
+
+    const system = `You are a helpful multilingual AI assistant for Indian citizens. 
+Language selected: ${lang}
+Domain: ${domain}
+
+CRITICAL RULES:
+- Always reply in ${lang} ONLY. If user wrote in ${lang}, reply in ${lang}.
+- If user wrote in English, reply in English.
+- Be warm, simple, and helpful for ordinary citizens.
+- Give practical, actionable advice.
+- Keep responses clear and to the point (3-6 sentences or structured bullets).
+- For ${domain} domain, give relevant domain-specific guidance.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: system,
+          messages: [{ role: 'user', content: text }]
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status} — Check your API key`);
+      }
+
+      const data = await res.json();
+      rmTyping();
+      const reply = data.content.map(c => c.type === 'text' ? c.text : '').join('\n').trim();
+      addBotMsg(reply, lang);
+
+    } catch (e) {
+      rmTyping();
+      showError('Error: ' + e.message);
+      addBotMsg('క్షమించండి, సమస్య వచ్చింది. దయచేసి మళ్ళీ ప్రయత్నించండి.\n(Sorry, an error occurred. Please try again.)', lang);
+    }
+
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+</script>
+</body>
+</html>
